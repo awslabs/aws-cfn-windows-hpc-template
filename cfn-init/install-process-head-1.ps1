@@ -16,7 +16,7 @@
 # 
 
 # 
-# This PowerShell script manages the installation process of Microsoft HPC Pack on a Compute Node 
+# This PowerShell script manages the installation process of Microsoft HPC Pack on a Head Node
 #
 # It must be called with the name of the text file storing the user's information, the current region, and the stack name. Text file in the format (one value per line, no padding):
 #   DOMAIN\HPCUser (Domain NetBIOS Name\User SAM Account Name)
@@ -47,6 +47,10 @@ schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN InstallHPCPack 
 Write-Host "Running Installation Scheduled Task"
 schtasks.exe /Run /I /TN InstallHPCPack
 
+#
+# above part will reboot the OS and below lines will not execute
+#
+
 Write-Host "Waiting for Installation"
 $status = (Get-Service -Name HpcManagement -ErrorAction SilentlyContinue | Select -ExpandProperty Status)
 while ($status -ne "Running")
@@ -55,15 +59,13 @@ while ($status -ne "Running")
   $status = (Get-Service -Name HpcManagement -ErrorAction SilentlyContinue | Select -ExpandProperty Status)
 }
 
-& ${env:SystemRoot}\Microsoft.NET\Framework64\v4.0.30319\installutil.exe "C:\Program Files\Microsoft HPC Pack 2012\Bin\ccppsh.dll"
+& ${env:SystemRoot}\Microsoft.NET\Framework64\v4.0.30319\installutil.exe "D:\HPCPack2012\Bin\ccppsh.dll"
 
 Write-Host "Deleting Installation Scheduled Task"
 schtasks.exe /Delete /F /TN InstallHPCPack
 
 Write-Host "Registering Post-Installation Scheduled Task"
-schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN PostInstallHPCPack /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\post-install-hpc-pack.ps1 >> C:\cfn\log\hpc-install.log 2>&1"
-
-Start-Sleep 300
+schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN PostInstallHPCPack /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\post-install-hpc-pack.ps1 -UserFile $UserFile >> C:\cfn\log\hpc-install.log 2>&1"
 
 Write-Host "Running Post-Installation Scheduled Task"
 schtasks.exe /Run /I /TN PostInstallHPCPack
@@ -80,5 +82,8 @@ while ($state -ne "Online")
 
 Write-Host "Deleting Post-Installation Scheduled Task"
 schtasks.exe /Delete /F /TN PostInstallHPCPack
+
+Write-Host "Registering Metrics Publication Scheduled Task"
+schtasks.exe /Create /SC MINUTE /MO 1 /RU "$UserPS" /RP "$PassPS" /TN ComputeMetrics /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\compute-metrics.ps1 -Region $Region -Stack $Stack >> C:\cfn\log\metrics-publish.log 2>&1"
 
 Write-Host "Done"

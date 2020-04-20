@@ -41,11 +41,11 @@ $content = Get-Content $UserFile
 $UserPS = $content[0]
 $PassPS = $content[1]
 
-Write-Host "Registering Installation Scheduled Task"
-schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN InstallHPCPack /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\install-hpc-pack.ps1 >> C:\cfn\log\hpc-install.log 2>&1"
+# Write-Host "Registering Installation Scheduled Task"
+# schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN InstallHPCPack /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\install-hpc-pack.ps1 >> C:\cfn\log\hpc-install.log 2>&1"
 
-Write-Host "Running Installation Scheduled Task"
-schtasks.exe /Run /I /TN InstallHPCPack
+# Write-Host "Running Installation Scheduled Task"
+# schtasks.exe /Run /I /TN InstallHPCPack
 
 Write-Host "Waiting for Installation"
 $status = (Get-Service -Name HpcManagement -ErrorAction SilentlyContinue | Select -ExpandProperty Status)
@@ -60,8 +60,10 @@ while ($status -ne "Running")
 Write-Host "Deleting Installation Scheduled Task"
 schtasks.exe /Delete /F /TN InstallHPCPack
 
+Start-Sleep 300
+
 Write-Host "Registering Post-Installation Scheduled Task"
-schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN PostInstallHPCPack /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\post-install-hpc-pack.ps1 -UserFile $UserFile >> C:\cfn\log\hpc-install.log 2>&1"
+schtasks.exe /Create /SC ONSTART /RU "$UserPS" /RP "$PassPS" /TN PostInstallHPCPack /TR "powershell.exe -ExecutionPolicy Unrestricted C:\cfn\install\post-install-hpc-pack.ps1 -UserFile $UserFile >> C:\cfn\log\hpc-install2.log 2>&1"
 
 Write-Host "Running Post-Installation Scheduled Task"
 schtasks.exe /Run /I /TN PostInstallHPCPack
